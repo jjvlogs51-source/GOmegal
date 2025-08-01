@@ -1,23 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Camera Test</title>
+  <title>WebRTC Test</title>
 </head>
 <body>
-  <h2>Camera/Mic Test</h2>
-  <video id="video" autoplay playsinline></video>
+  <h2>WebRTC Local Test (Open in 2 Tabs)</h2>
+  <button id="startBtn">Start Camera</button>
+  <button id="callBtn">Call</button>
+  <video id="local" autoplay playsinline muted></video>
+  <video id="remote" autoplay playsinline></video>
+
   <script>
-    async function testMedia() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById("video").srcObject = stream;
-        console.log("✅ Camera/Mic access granted.");
-      } catch (err) {
-        console.error("❌ Permission denied:", err);
-        alert("Camera/Mic access denied!");
-      }
+    let pc, localStream;
+    const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+    const startBtn = document.getElementById("startBtn");
+    const callBtn = document.getElementById("callBtn");
+    const localVideo = document.getElementById("local");
+    const remoteVideo = document.getElementById("remote");
+
+    async function startCamera() {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideo.srcObject = localStream;
     }
-    testMedia();
+
+    async function call() {
+      pc = new RTCPeerConnection(servers);
+      pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      console.log("Offer:", JSON.stringify(offer)); // Copy to 2nd tab
+    }
+
+    // Paste answer from 2nd tab here:
+    async function setAnswer(ans) {
+      await pc.setRemoteDescription(new RTCSessionDescription(ans));
+    }
+
+    startBtn.onclick = startCamera;
+    callBtn.onclick = call;
   </script>
 </body>
 </html>
