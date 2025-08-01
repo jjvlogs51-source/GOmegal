@@ -9,21 +9,26 @@
 <body>
   <div class="container">
     <h1>GOmegle</h1>
+
     <div id="video-section">
       <video id="remoteVideo" autoplay playsinline></video>
       <video id="localVideo" autoplay playsinline muted></video>
     </div>
+
     <div id="chat-section">
       <div class="chat-box" id="chatBox"></div>
       <input type="text" id="messageInput" placeholder="Type a message..."/>
       <button id="sendBtn">Send</button>
     </div>
+
     <div id="controls">
       <input type="text" id="interestsInput" placeholder="Enter interests (comma separated)"/>
       <button id="connectBtn">Connect</button>
       <button id="stopBtn" disabled>Stop</button>
     </div>
   </div>
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-database.js"></script>
   <script src="script.js"></script>
