@@ -7,26 +7,42 @@
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <div class="container">
+  <div class="header">
     <h1>GOmegle</h1>
+    <p>Talk to strangers! Video and text chat with interests.</p>
+  </div>
 
-    <div id="video-section">
-      <video id="remoteVideo" autoplay playsinline></video>
-      <video id="localVideo" autoplay playsinline muted></video>
+  <div class="main">
+    <div class="video-section">
+      <div class="video-container">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <p>Stranger</p>
+      </div>
+      <div class="video-container">
+        <video id="localVideo" autoplay playsinline muted></video>
+        <p>You</p>
+      </div>
     </div>
 
-    <div id="chat-section">
-      <div class="chat-box" id="chatBox"></div>
-      <input type="text" id="messageInput" placeholder="Type a message..."/>
-      <button id="sendBtn">Send</button>
-    </div>
-
-    <div id="controls">
-      <input type="text" id="interestsInput" placeholder="Enter interests (comma separated)"/>
-      <button id="connectBtn">Connect</button>
+    <div class="controls">
+      <input type="text" id="interestsInput" placeholder="Enter your interests (comma separated)"/>
+      <button id="connectBtn">Start</button>
+      <button id="skipBtn" disabled>Skip</button>
       <button id="stopBtn" disabled>Stop</button>
     </div>
+
+    <div class="chat-section">
+      <div class="chat-box" id="chatBox"></div>
+      <div class="chat-input">
+        <input type="text" id="messageInput" placeholder="Type a message..."/>
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
   </div>
+
+  <footer>
+    <p>GOmegle is an experimental platform to chat with strangers, inspired by Omegle & Uhmegle.</p>
+  </footer>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-app.js"></script>
@@ -34,4 +50,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
