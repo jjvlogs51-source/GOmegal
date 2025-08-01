@@ -1,60 +1,151 @@
-// Firebase Config (create your own project at https://firebase.google.com/)
+// 1. Initialize Firebase (Create project at https://firebase.google.com/)
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
   databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
   projectId: "YOUR_PROJECT_ID",
   storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "SENDER_ID",
-  appId: "APP_ID"
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
-
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// 2. WebRTC setup
+const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+let peerConnection, localStream, remoteStream;
 let myId = Math.random().toString(36).substring(2, 9);
-let chatRef = db.ref("chats");
-let connectedUser = null;
+let currentChat = null;
 
 // Elements
 const chatBox = document.getElementById("chatBox");
 const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const connectBtn = document.getElementById("connectBtn");
+const stopBtn = document.getElementById("stopBtn");
+const interestsInput = document.getElementById("interestsInput");
+const localVideo = document.getElementById("localVideo");
+const remoteVideo = document.getElementById("remoteVideo");
 
-connectBtn.addEventListener("click", connectToStranger);
-sendBtn.addEventListener("click", sendMessage);
+sendBtn.onclick = sendMessage;
+connectBtn.onclick = connect;
+stopBtn.onclick = stopChat;
 
-function connectToStranger() {
-  chatBox.innerHTML += `<div>Looking for a stranger...</div>`;
-  chatRef.once("value", (snapshot) => {
+// Setup local video
+async function setupMedia() {
+  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  localVideo.srcObject = localStream;
+}
+
+// Connect to a stranger with interests
+async function connect() {
+  await setupMedia();
+  connectBtn.disabled = true;
+  chatBox.innerHTML += `<div>🔎 Searching for a stranger...</div>`;
+
+  const interests = interestsInput.value.split(",").map(i => i.trim().toLowerCase()).filter(Boolean);
+
+  // Find match in Firebase
+  const usersRef = db.ref("users");
+  usersRef.once("value", async (snapshot) => {
     let users = snapshot.val() || {};
-    let strangerId = Object.keys(users).find(uid => uid !== myId && !users[uid].connected);
+    let strangerId = Object.keys(users).find(uid => 
+      uid !== myId && !users[uid].connected && users[uid].interests.some(i => interests.includes(i))
+    );
     if (strangerId) {
-      // Connect to stranger
-      connectedUser = strangerId;
-      chatRef.child(myId).set({ connected: connectedUser });
-      chatRef.child(strangerId).update({ connected: myId });
-      chatBox.innerHTML += `<div>Connected to stranger!</div>`;
+      startCall(strangerId);
     } else {
-      chatRef.child(myId).set({ connected: false });
+      // No match, register self
+      await usersRef.child(myId).set({ connected: false, interests });
+      listenForCall();
     }
   });
 }
 
-// Listen for messages
-chatRef.on("child_changed", (snap) => {
-  if (snap.key === myId && snap.val().message) {
-    chatBox.innerHTML += `<div><b>Stranger:</b> ${snap.val().message}</div>`;
+// Start a call
+async function startCall(strangerId) {
+  chatBox.innerHTML += `<div>✅ Connected to a stranger!</div>`;
+  stopBtn.disabled = false;
+
+  peerConnection = new RTCPeerConnection(servers);
+  remoteStream = new MediaStream();
+  remoteVideo.srcObject = remoteStream;
+
+  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  peerConnection.ontrack = (e) => e.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+
+  const chatRef = db.ref("calls/" + myId);
+  peerConnection.onicecandidate = (e) => e.candidate && chatRef.push({ type: "candidate", candidate: e.candidate });
+
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
+  db.ref("calls/" + strangerId).push({ type: "offer", offer, from: myId });
+
+  listenForMessages(strangerId);
+  currentChat = strangerId;
+}
+
+// Listen for incoming calls
+function listenForCall() {
+  db.ref("calls/" + myId).on("child_added", async (snap) => {
+    const data = snap.val();
+    if (data.type === "offer") {
+      acceptCall(data.from, data.offer);
+    } else if (data.type === "candidate" && peerConnection) {
+      await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+    }
+  });
+}
+
+// Accept call
+async function acceptCall(strangerId, offer) {
+  chatBox.innerHTML += `<div>✅ Stranger connected!</div>`;
+  stopBtn.disabled = false;
+
+  peerConnection = new RTCPeerConnection(servers);
+  remoteStream = new MediaStream();
+  remoteVideo.srcObject = remoteStream;
+
+  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  peerConnection.ontrack = (e) => e.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+  peerConnection.onicecandidate = (e) => e.candidate && db.ref("calls/" + strangerId).push({ type: "candidate", candidate: e.candidate });
+
+  await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+  const answer = await peerConnection.createAnswer();
+  await peerConnection.setLocalDescription(answer);
+  db.ref("calls/" + strangerId).push({ type: "answer", answer });
+  listenForMessages(strangerId);
+  currentChat = strangerId;
+}
+
+// Listen for answer
+db.ref("calls/" + myId).on("child_added", async (snap) => {
+  const data = snap.val();
+  if (data.type === "answer" && peerConnection) {
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+  }
+  if (data.type === "candidate" && peerConnection) {
+    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
   }
 });
 
+// Messaging
+function listenForMessages(strangerId) {
+  db.ref("messages/" + strangerId).on("child_added", (snap) => {
+    const { text, from } = snap.val();
+    if (from !== myId) chatBox.innerHTML += `<div><b>Stranger:</b> ${text}</div>`;
+  });
+}
+
 function sendMessage() {
-  if (!connectedUser) return;
   const msg = messageInput.value.trim();
-  if (!msg) return;
+  if (!msg || !currentChat) return;
   chatBox.innerHTML += `<div><b>You:</b> ${msg}</div>`;
-  chatRef.child(connectedUser).update({ message: msg });
+  db.ref("messages/" + currentChat).push({ text: msg, from: myId });
   messageInput.value = "";
+}
+
+// Stop chat
+function stopChat() {
+  location.reload();
 }
