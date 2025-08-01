@@ -44,11 +44,21 @@ sendBtn.addEventListener("click", sendMessage);
 messageInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
 
 connectBtn.addEventListener("click", async () => {
+  try {
+    // Prompt IMMEDIATELY on button click
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+    console.log("✅ Camera/Mic enabled.");
+  } catch (err) {
+    console.error("❌ Camera/Mic error:", err);
+    alert("Please allow camera and microphone access.");
+    return;
+  }
+
   connectBtn.disabled = true;
   skipBtn.disabled = false;
   stopBtn.disabled = false;
-  await setupMedia();
-  startMatching();
+  startMatching(); // Only run matching AFTER permission granted
 });
 
 skipBtn.addEventListener("click", () => skip());
