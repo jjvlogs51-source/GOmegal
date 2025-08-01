@@ -1,4 +1,11 @@
-// ================== FIREBASE CONFIG ==================
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBTUWFf5riABpR0vBfzRMSgSqd0gXaJMx0",
   authDomain: "gomegle-6fe5f.firebaseapp.com",
@@ -6,10 +13,13 @@ const firebaseConfig = {
   projectId: "gomegle-6fe5f",
   storageBucket: "gomegle-6fe5f.firebasestorage.app",
   messagingSenderId: "41008653138",
-  appId: "1:41008653138:web:7ccb5c813bc8b9372a508b"
+  appId: "1:41008653138:web:7ccb5c813bc8b9372a508b",
+  measurementId: "G-CNT6G4JG9G"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 // ================== GLOBALS ==================
 const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
