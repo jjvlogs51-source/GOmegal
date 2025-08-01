@@ -1,17 +1,17 @@
-// Firebase Setup
+// ================== FIREBASE CONFIG ==================
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBTUWFf5riABpR0vBfzRMSgSqd0gXaJMx0",
+  authDomain: "gomegle-6fe5f.firebaseapp.com",
+  databaseURL: "https://gomegle-6fe5f-default-rtdb.firebaseio.com",
+  projectId: "gomegle-6fe5f",
+  storageBucket: "gomegle-6fe5f.firebasestorage.app",
+  messagingSenderId: "41008653138",
+  appId: "1:41008653138:web:7ccb5c813bc8b9372a508b"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Globals
+// ================== GLOBALS ==================
 const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 let peerConnection, localStream, remoteStream;
 let myId = Math.random().toString(36).substring(2, 9);
@@ -29,7 +29,7 @@ const interestsInput = document.getElementById("interestsInput");
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 
-// Event Listeners
+// ================== EVENT LISTENERS ==================
 sendBtn.addEventListener("click", sendMessage);
 messageInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
 
@@ -44,17 +44,17 @@ connectBtn.addEventListener("click", async () => {
 skipBtn.addEventListener("click", () => skip());
 stopBtn.addEventListener("click", () => location.reload());
 
-// Setup camera/mic
+// ================== MEDIA ==================
 async function setupMedia() {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
   } catch (err) {
-    alert("Camera/mic access required!");
+    alert("❌ Camera/mic access is required!");
   }
 }
 
-// Start matching strangers
+// ================== MATCHING ==================
 async function startMatching() {
   chatBox.innerHTML += `<div>🔎 Searching for a stranger...</div>`;
   const interests = interestsInput.value.split(",").map(i => i.trim().toLowerCase()).filter(Boolean);
@@ -73,14 +73,12 @@ async function startMatching() {
   });
 }
 
-// Skip to new stranger
 function skip() {
   endConnection();
   chatBox.innerHTML += `<div>⏭ Skipped. Searching again...</div>`;
   startMatching();
 }
 
-// End connection
 function endConnection() {
   if (peerConnection) peerConnection.close();
   peerConnection = null;
@@ -88,7 +86,7 @@ function endConnection() {
   currentChat = null;
 }
 
-// Start call
+// ================== CALL HANDLING ==================
 async function startCall(strangerId) {
   chatBox.innerHTML += `<div>✅ Connected!</div>`;
   currentChat = strangerId;
@@ -135,6 +133,7 @@ db.ref("calls/" + myId).on("child_added", async (snap) => {
   if (data.type === "candidate" && peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
 });
 
+// ================== MESSAGING ==================
 function listenForMessages(strangerId) {
   db.ref("messages/" + strangerId).on("child_added", snap => {
     const { text, from } = snap.val();
