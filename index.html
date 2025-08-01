@@ -1,45 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>WebRTC Test</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GOmegle - Talk to Strangers!</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <h2>WebRTC Local Test (Open in 2 Tabs)</h2>
-  <button id="startBtn">Start Camera</button>
-  <button id="callBtn">Call</button>
-  <video id="local" autoplay playsinline muted></video>
-  <video id="remote" autoplay playsinline></video>
+  <div class="header">
+    <h1>GOmegle</h1>
+    <p>Talk to strangers! Video and text chat with interests.</p>
+  </div>
 
-  <script>
-    let pc, localStream;
-    const servers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-    const startBtn = document.getElementById("startBtn");
-    const callBtn = document.getElementById("callBtn");
-    const localVideo = document.getElementById("local");
-    const remoteVideo = document.getElementById("remote");
+  <div class="main">
+    <div class="video-section">
+      <div class="video-container">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <p>Stranger</p>
+      </div>
+      <div class="video-container">
+        <video id="localVideo" autoplay playsinline muted></video>
+        <p>You</p>
+      </div>
+    </div>
 
-    async function startCamera() {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localVideo.srcObject = localStream;
-    }
+    <div class="controls">
+      <input type="text" id="interestsInput" placeholder="Enter your interests (comma separated)"/>
+      <button id="connectBtn">Start</button>
+      <button id="skipBtn" disabled>Skip</button>
+      <button id="stopBtn" disabled>Stop</button>
+    </div>
 
-    async function call() {
-      pc = new RTCPeerConnection(servers);
-      pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
-      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    <div class="chat-section">
+      <div class="chat-box" id="chatBox"></div>
+      <div class="chat-input">
+        <input type="text" id="messageInput" placeholder="Type a message..."/>
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
+  </div>
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      console.log("Offer:", JSON.stringify(offer)); // Copy to 2nd tab
-    }
+  <footer>
+    <p>GOmegle is an experimental platform to chat with strangers, inspired by Omegle & Uhmegle.</p>
+  </footer>
 
-    // Paste answer from 2nd tab here:
-    async function setAnswer(ans) {
-      await pc.setRemoteDescription(new RTCSessionDescription(ans));
-    }
-
-    startBtn.onclick = startCamera;
-    callBtn.onclick = call;
-  </script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-database.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
