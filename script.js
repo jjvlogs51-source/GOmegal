@@ -29,13 +29,18 @@ const remoteVideo = document.getElementById("remoteVideo");
 
 // ===================== EVENT HANDLERS =====================
 sendBtn.addEventListener("click", sendMessage);
-connectBtn.addEventListener("click", connect);
-stopBtn.addEventListener("click", stopChat);
+connectBtn.addEventListener("click", async () => {
+  connectBtn.disabled = true;
+  stopBtn.disabled = false;
 
-// Press Enter to send message
-messageInput.addEventListener("keypress", e => {
-  if (e.key === "Enter") sendMessage();
+  // 🔥 ASK FOR CAMERA/MIC IMMEDIATELY ON CLICK
+  await setupMedia();
+
+  chatBox.innerHTML += `<div>🔎 Searching for a stranger...</div>`;
+  connect(); // Proceed to matchmaking AFTER permission granted
 });
+stopBtn.addEventListener("click", stopChat);
+messageInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
 
 // ===================== MEDIA SETUP =====================
 async function setupMedia() {
@@ -43,19 +48,13 @@ async function setupMedia() {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
   } catch (err) {
-    alert("Camera/Microphone access is required!");
+    alert("❌ Camera and microphone access are required to use GOmegle.");
     console.error(err);
   }
 }
 
-// ===================== CONNECT FUNCTION =====================
+// ===================== CONNECT TO STRANGER =====================
 async function connect() {
-  connectBtn.disabled = true;
-  stopBtn.disabled = false;
-  chatBox.innerHTML += `<div>🔎 Searching for a stranger...</div>`;
-
-  await setupMedia(); // Request camera & mic NOW
-
   const interests = interestsInput.value
     .split(",")
     .map(i => i.trim().toLowerCase())
@@ -63,7 +62,6 @@ async function connect() {
 
   const usersRef = db.ref("users");
 
-  // Look for match
   usersRef.once("value", async (snapshot) => {
     const users = snapshot.val() || {};
     let strangerId = Object.keys(users).find(uid =>
@@ -89,22 +87,13 @@ async function startCall(strangerId) {
   remoteStream = new MediaStream();
   remoteVideo.srcObject = remoteStream;
 
-  // Local tracks
   localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  peerConnection.ontrack = (event) => event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
 
-  // Remote tracks
-  peerConnection.ontrack = (event) => {
-    event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
-  };
-
-  // ICE candidates
   peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      db.ref("calls/" + strangerId).push({ type: "candidate", candidate: event.candidate });
-    }
+    if (event.candidate) db.ref("calls/" + strangerId).push({ type: "candidate", candidate: event.candidate });
   };
 
-  // Offer
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
   db.ref("calls/" + strangerId).push({ type: "offer", offer, from: myId });
@@ -177,5 +166,5 @@ function sendMessage() {
 
 // ===================== STOP CHAT =====================
 function stopChat() {
-  location.reload(); // Quick reset
+  location.reload(); // Full reset
 }
